@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>CourseCompass — TU Wien</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,sans-serif;background:#f5f5f5;color:#1a1a1a;min-height:100vh}
+    .container{max-width:820px;margin:0 auto;padding:2rem 1rem}
+    .header{display:flex;align-items:center;gap:12px;margin-bottom:2rem}
+    .logo{width:42px;height:42px;background:#1d4ed8;border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-size:22px;flex-shrink:0}
+    .header-text h1{font-size:22px;font-weight:700}
+    .header-text p{font-size:13px;color:#6b7280}
+    .tabs{display:flex;border-bottom:1px solid #e5e7eb;margin-bottom:1.5rem}
+    .tab{background:none;border:none;border-bottom:2px solid transparent;padding:8px 18px;cursor:pointer;font-size:14px;color:#6b7280;margin-bottom:-1px;font-family:inherit}
+    .tab.active{color:#1d4ed8;font-weight:600;border-bottom-color:#1d4ed8}
+    .card{background:white;border:1px solid #e5e7eb;border-radius:12px;padding:1.25rem;margin-bottom:1rem}
+    .card-title{font-size:15px;font-weight:600;margin-bottom:1rem;display:flex;align-items:center;gap:8px}
+    label{display:block;font-size:13px;font-weight:500;color:#6b7280;margin-bottom:5px}
+    select,input[type=text]{width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;background:white}
+    select:focus,input:focus{outline:2px solid #1d4ed8;border-color:transparent}
+    .field{margin-bottom:1rem}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+    .three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1rem}
+    .mode-toggle{display:flex;border:1px solid #d1d5db;border-radius:8px;overflow:hidden}
+    .mode-btn{flex:1;border:none;padding:8px;cursor:pointer;font-size:13px;font-family:inherit;background:white;color:#6b7280}
+    .mode-btn.active{background:#eff6ff;color:#1d4ed8;font-weight:600}
+    .mode-hint{margin-top:4px;font-size:11px;color:#9ca3af}
+    .btn-primary{width:100%;padding:11px;background:#1d4ed8;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+    .btn-primary:hover{background:#1e40af}
+    .btn-secondary{padding:5px 12px;background:white;border:1px solid #d1d5db;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit}
+    .btn-save{padding:8px 20px;background:#1d4ed8;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+    .btn-edit{padding:5px 14px;background:white;border:1px solid #1d4ed8;color:#1d4ed8;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:500}
+    .formula-box{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;margin-bottom:1rem;font-size:12px;color:#6b7280}
+    .formula-box strong{color:#1a1a1a}
+    .course-picker{border:1px solid #d1d5db;border-radius:8px;overflow:hidden}
+    .search-row{padding:8px 12px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:8px}
+    .search-input{border:none;background:none;outline:none;font-size:13px;flex:1;font-family:inherit}
+    .course-list{max-height:260px;overflow-y:auto}
+    .course-item{display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:13px}
+    .course-item:hover{background:#f9fafb}
+    .course-item.checked{background:#eff6ff}
+    .tag{font-size:11px;padding:2px 8px;border-radius:4px;font-weight:500;white-space:nowrap}
+    .tag-ai{background:#dbeafe;color:#1e40af}
+    .tag-se{background:#d1fae5;color:#065f46}
+    .tag-es{background:#fce7f3;color:#9d174d}
+    .tag-su{background:#dcfce7;color:#14532d}
+    .tag-ms{background:#fef3c7;color:#78350f}
+    .tag-ee{background:#ffedd5;color:#9a3412}
+    .tag-ds{background:#ede9fe;color:#4c1d95}
+    .tag-da{background:#e0f2fe;color:#0369a1}
+    .tag-en{background:#f0fdf4;color:#15803d}
+    .tag-em{background:#fef9c3;color:#854d0e}
+    .tag-ise{background:#f3e8ff;color:#7e22ce}
+    .tag-msc{background:#fff7ed;color:#c2410c}
+    .level-badge{font-size:10px;padding:1px 7px;border-radius:10px;font-weight:600}
+    .level-fd{background:#dcfce7;color:#14532d}
+    .level-cor{background:#dbeafe;color:#1e40af}
+    .level-ext{background:#fce7f3;color:#9d174d}
+    .level-other{background:#f3f4f6;color:#4b5563}
+    .selected-tags{display:flex;flex-wrap:wrap;gap:6px;min-height:28px}
+    .sel-tag{font-size:12px;padding:3px 10px;background:#f3f4f6;border-radius:6px;display:flex;align-items:center;gap:6px}
+    .sel-tag button{background:none;border:none;cursor:pointer;color:#9ca3af;font-size:14px;padding:0;line-height:1}
+    .profile-display{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+    .profile-avatar{width:44px;height:44px;background:#1d4ed8;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:16px;font-weight:700;flex-shrink:0}
+    .profile-name{font-size:15px;font-weight:600}
+    .profile-meta{font-size:12px;color:#6b7280;margin-top:2px}
+    .profile-courses{font-size:12px;color:#1d4ed8;margin-top:3px;font-weight:500}
+    .rec-card{background:white;border:1px solid #e5e7eb;border-radius:12px;padding:1rem 1.25rem;margin-bottom:0.75rem}
+    .rec-rank{font-size:11px;color:#9ca3af;margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .rank-badge{background:#eff6ff;color:#1e40af;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600}
+    .rec-name{font-size:15px;font-weight:600;margin-bottom:6px}
+    .score-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+    .score-bar-bg{flex:1;height:5px;background:#e5e7eb;border-radius:3px}
+    .score-bar-fill{height:100%;background:#1d4ed8;border-radius:3px}
+    .score-val{font-size:12px;font-weight:600;color:#1d4ed8;min-width:36px}
+    .explanation{font-size:12px;color:#6b7280;padding:8px 10px;background:#f9fafb;border-radius:6px;line-height:1.5;margin-top:8px}
+    .tags-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+    .locked-section{margin-top:1rem}
+    .locked-title{font-size:13px;font-weight:600;color:#6b7280;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+    .locked-card{background:#fff;border:1px dashed #e5e7eb;border-radius:10px;padding:10px 14px;margin-bottom:6px;font-size:13px;display:flex;align-items:flex-start;gap:10px}
+    .locked-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+    .locked-name{font-weight:500;color:#374151}
+    .locked-prereq{font-size:11px;color:#9ca3af;margin-top:2px}
+    .metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:1.5rem}
+    .metric-card{background:#f9fafb;border-radius:10px;padding:1rem}
+    .metric-label{font-size:12px;color:#9ca3af;margin-bottom:4px}
+    .metric-val{font-size:24px;font-weight:700}
+    .metric-sub{font-size:11px;color:#9ca3af;margin-top:2px}
+    .level-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1.5rem}
+    .level-card{border-radius:10px;padding:0.75rem 1rem;text-align:center}
+    .level-card .lval{font-size:22px;font-weight:700}
+    .level-card .llabel{font-size:11px;margin-top:2px}
+    .domain-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px}
+    .domain-name{flex:1}
+    .enroll-bar-bg{width:90px;height:6px;background:#e5e7eb;border-radius:3px}
+    .enroll-bar-fill{height:100%;border-radius:3px;background:#1d4ed8}
+    .admin-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+    .admin-table th{text-align:left;font-size:11px;font-weight:500;color:#9ca3af;padding:6px 8px;border-bottom:1px solid #e5e7eb}
+    .admin-table td{padding:7px 8px;border-bottom:1px solid #f3f4f6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .admin-table tr:hover td{background:#f9fafb}
+    .scroll-table{max-height:340px;overflow-y:auto}
+    .filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:0.75rem}
+    .filter-chip{font-size:11px;padding:3px 10px;border-radius:12px;cursor:pointer;border:1px solid #d1d5db;background:white;font-family:inherit}
+    .filter-chip.active{background:#eff6ff;color:#1d4ed8;border-color:#1d4ed8;font-weight:600}
+    .cold-note{font-size:12px;color:#78350f;background:#fef3c7;padding:8px 12px;border-radius:8px;margin-bottom:1rem}
+    .no-results{text-align:center;padding:2rem;color:#9ca3af;font-size:14px}
+    .loading{text-align:center;padding:1.5rem;color:#9ca3af;font-size:14px}
+    .error-msg{font-size:12px;color:#991b1b;background:#fef2f2;padding:8px 12px;border-radius:8px;margin-bottom:1rem}
+    .section-title{font-size:15px;font-weight:600;margin-bottom:0.75rem}
+    .results-header{margin-bottom:0.75rem;font-size:14px;color:#6b7280}
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="logo">🧭</div>
+    <div class="header-text">
+      <h1>CourseCompass</h1>
+      <p id="subtitle">TU Wien elective course recommender · loading...</p>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('student')">Find courses</button>
+    <button class="tab" onclick="switchTab('admin')">Admin dashboard</button>
+  </div>
+
+  <!-- Student Tab -->
+  <div id="tab-student">
+    <!-- Profile -->
+    <div class="card">
+      <div class="card-title">👤 Your profile</div>
+      <div id="profile-view" style="display:none">
+        <div class="profile-display">
+          <div class="profile-avatar" id="avatar-initials">?</div>
+          <div style="flex:1">
+            <div class="profile-name" id="display-name">—</div>
+            <div class="profile-meta" id="display-program-sem">—</div>
+            <div class="profile-courses" id="display-courses">No completed courses</div>
+          </div>
+          <button class="btn-edit" onclick="editProfile()">Edit</button>
+        </div>
+      </div>
+      <div id="profile-form">
+        <div class="three-col">
+          <div class="field" style="margin-bottom:0">
+            <label>Full name</label>
+            <input type="text" id="input-name" placeholder="e.g. Anna Müller"/>
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Study program</label>
+            <select id="input-program">
+              <option value="">Select program...</option>
+              <option>Business Informatics</option>
+              <option>Data Science</option>
+              <option>Software Engineering</option>
+              <option>Logic and Artificial Intelligence</option>
+              <option>Media and Human-Centered Computing</option>
+              <option>Visual Computing</option>
+              <option>Embedded Computing Systems</option>
+              <option>Computer Engineering</option>
+              <option>Quantum Information Science and Technology</option>
+            </select>
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Current semester</label>
+            <select id="input-semester">
+              <option value="">Select semester...</option>
+              <option>1st semester</option>
+              <option>2nd semester</option>
+              <option>3rd semester</option>
+              <option>4th semester</option>
+              <option>5th semester</option>
+              <option>6th semester</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:1rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label style="margin:0">Completed courses <span id="completed-count"></span></label>
+            <button class="btn-secondary" onclick="togglePicker()">Select courses</button>
+          </div>
+          <div id="selected-tags" class="selected-tags"></div>
+          <div id="course-picker" style="display:none;margin-top:8px">
+            <div class="course-picker">
+              <div class="search-row">
+                🔍<input class="search-input" id="course-search" placeholder="Search by name, ID, domain or level..." oninput="filterCourses()"/>
+              </div>
+              <div class="course-list" id="course-list"><div class="loading">Loading...</div></div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:1rem;display:flex;justify-content:flex-end">
+          <button class="btn-save" onclick="saveProfile()">Save profile</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="card">
+      <div class="card-title">⚙️ Settings</div>
+      <div class="formula-box" id="formula-box">
+        Scoring: <strong>S = C</strong> &nbsp;·&nbsp; C = content match (domain overlap with your completed courses)
+      </div>
+      <div class="two-col" style="margin-bottom:1rem">
+        <div>
+          <label>Mode</label>
+          <div class="mode-toggle">
+            <button class="mode-btn active" id="btn-default" onclick="setMode('default')">Relevance</button>
+            <button class="mode-btn" id="btn-diversity" onclick="setMode('diversity')">Diversity</button>
+          </div>
+          <p class="mode-hint" id="mode-hint">Ranks purely by content match — no bias</p>
+        </div>
+        <div>
+          <label>Results: <span id="num-label">5</span></label>
+          <input type="range" min="3" max="10" step="1" value="5"
+            oninput="document.getElementById('num-label').textContent=this.value"
+            id="num-results" style="width:100%;margin-top:8px"/>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#9ca3af"><span>3</span><span>10</span></div>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="getRecommendations()">Get recommendations</button>
+    </div>
+    <div id="results-area"></div>
+  </div>
+
+  <!-- Admin Tab -->
+  <div id="tab-admin" style="display:none">
+    <div id="admin-area"><div class="loading">Loading stats...</div></div>
+  </div>
+</div>
+
+<script>
+const DOMAIN_CLASS = {
+  "Artificial Intelligence":"tag-ai","Software Engineering":"tag-se",
+  "Ethics and Society":"tag-es","Sustainable Engineering":"tag-su",
+  "Mathematics and Statistics":"tag-ms","Electrical Engineering":"tag-ee",
+  "Data Science":"tag-ds","Data Analytics":"tag-da",
+  "Enterprise Engineering":"tag-en","Economic Modeling":"tag-em",
+  "Information Systems Engineering":"tag-ise","Management Science":"tag-msc",
+};
+
+const LEVEL_CLASS = {
+  "Foundation":"level-fd","Core":"level-cor","Extension":"level-ext"
+};
+
+let allCourses=[], completedIds=[], mode="default", pickerOpen=false, adminDomainFilter="All";
+const PROFILE_KEY="coursecompass_profile";
+
+function loadProfile(){try{const s=localStorage.getItem(PROFILE_KEY);return s?JSON.parse(s):null;}catch{return null;}}
+function saveProfileToStorage(p){localStorage.setItem(PROFILE_KEY,JSON.stringify(p));}
+
+function saveProfile(){
+  const name=document.getElementById("input-name").value.trim();
+  const program=document.getElementById("input-program").value;
+  const semester=document.getElementById("input-semester").value;
+  if(!name){alert("Please enter your name.");return;}
+  if(!program){alert("Please select your study program.");return;}
+  if(!semester){alert("Please select your current semester.");return;}
+  const profile={name,program,semester,completedIds};
+  saveProfileToStorage(profile);
+  showProfileView(profile);
+}
+
+function editProfile(){
+  document.getElementById("profile-view").style.display="none";
+  document.getElementById("profile-form").style.display="block";
+}
+
+function showProfileView(p){
+  completedIds=p.completedIds||[];
+  document.getElementById("input-name").value=p.name;
+  document.getElementById("input-program").value=p.program;
+  document.getElementById("input-semester").value=p.semester;
+  const initials=p.name.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);
+  document.getElementById("avatar-initials").textContent=initials;
+  document.getElementById("display-name").textContent=p.name;
+  document.getElementById("display-program-sem").textContent=`${p.program} · ${p.semester}`;
+  document.getElementById("display-courses").textContent=
+    completedIds.length?`${completedIds.length} completed course${completedIds.length>1?"s":""}`:"No completed courses";
+  document.getElementById("profile-view").style.display="block";
+  document.getElementById("profile-form").style.display="none";
+  renderSelectedTags();
+  renderCourseList();
+}
+
+async function init(){
+  try{
+    const res=await fetch("/api/courses");
+    const data=await res.json();
+    allCourses=data.courses;
+    document.getElementById("subtitle").textContent=
+      `TU Wien elective course recommender · ${allCourses.length} courses`;
+    const saved=loadProfile();
+    if(saved){showProfileView(saved);}
+    else{
+      document.getElementById("profile-form").style.display="block";
+      document.getElementById("profile-view").style.display="none";
+    }
+    renderCourseList();
+  }catch(e){document.getElementById("subtitle").textContent="Error loading courses";}
+}
+
+function switchTab(tab){
+  document.getElementById("tab-student").style.display=tab==="student"?"block":"none";
+  document.getElementById("tab-admin").style.display=tab==="admin"?"block":"none";
+  document.querySelectorAll(".tab").forEach((t,i)=>{
+    t.classList.toggle("active",(tab==="student"&&i===0)||(tab==="admin"&&i===1));
+  });
+  if(tab==="admin")loadAdminStats();
+}
+
+function setMode(m){
+  mode=m;
+  document.getElementById("btn-default").classList.toggle("active",m==="default");
+  document.getElementById("btn-diversity").classList.toggle("active",m==="diversity");
+  document.getElementById("mode-hint").textContent=m==="default"
+    ?"Ranks purely by content match — no bias"
+    :"Balances content match with domain diversity";
+  document.getElementById("formula-box").innerHTML=m==="default"
+    ?"Scoring: <strong>S = C</strong> &nbsp;·&nbsp; C = content match (domain overlap with your completed courses)"
+    :"Scoring: <strong>S = 0.4·C + 0.6·D</strong> &nbsp;·&nbsp; C = content match &nbsp;·&nbsp; D = diversity (unexplored domains)";
+}
+
+function togglePicker(){
+  pickerOpen=!pickerOpen;
+  document.getElementById("course-picker").style.display=pickerOpen?"block":"none";
+}
+
+function levelClass(level){return LEVEL_CLASS[level]||"level-other";}
+
+function renderCourseList(){
+  const q=(document.getElementById("course-search")?.value||"").toLowerCase();
+  const filtered=allCourses.filter(c=>
+    c.name.toLowerCase().includes(q)||
+    c.id.toLowerCase().includes(q)||
+    c.domain.toLowerCase().includes(q)||
+    (c.level||"").toLowerCase().includes(q)
+  );
+  const list=document.getElementById("course-list");
+  if(!list)return;
+  list.innerHTML=filtered.map(c=>{
+    const cls=DOMAIN_CLASS[c.domain]||"";
+    const lvlCls=levelClass(c.level);
+    const checked=completedIds.includes(c.id);
+    return `<label class="course-item ${checked?"checked":""}" style="cursor:pointer">
+      <input type="checkbox" ${checked?"checked":""} onchange="toggleCourse('${c.id}')"/>
+      <div style="flex:1;min-width:0">
+        <span style="font-weight:${checked?"600":"400"}">${c.name}</span>
+        <span style="font-size:11px;color:#9ca3af"> · ${c.id} · ${c.ects} ECTS</span>
+      </div>
+      <div style="display:flex;gap:4px;flex-shrink:0">
+        ${c.level?`<span class="level-badge ${lvlCls}">${c.level}</span>`:""}
+        <span class="tag ${cls}" style="font-size:10px">${c.domain.split(" ")[0]}</span>
+      </div>
+    </label>`;
+  }).join("")||"<div style='padding:12px;text-align:center;color:#9ca3af'>No courses found</div>";
+}
+
+function filterCourses(){renderCourseList();}
+
+function toggleCourse(id){
+  completedIds=completedIds.includes(id)?completedIds.filter(c=>c!==id):[...completedIds,id];
+  renderSelectedTags();
+  renderCourseList();
+  const saved=loadProfile();
+  if(saved){
+    saved.completedIds=completedIds;
+    saveProfileToStorage(saved);
+    document.getElementById("display-courses").textContent=
+      completedIds.length?`${completedIds.length} completed course${completedIds.length>1?"s":""}`:"No completed courses";
+  }
+}
+
+function renderSelectedTags(){
+  const el=document.getElementById("selected-tags");
+  const countEl=document.getElementById("completed-count");
+  if(completedIds.length){
+    countEl.innerHTML=`<span style="background:#eff6ff;color:#1e40af;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600">${completedIds.length}</span>`;
+    el.innerHTML=completedIds.map(id=>`<span class="sel-tag">${id}<button onclick="toggleCourse('${id}')">×</button></span>`).join("");
+  }else{
+    countEl.innerHTML="";
+    el.innerHTML=`<span style="font-size:13px;color:#9ca3af;font-style:italic">No courses selected — cold-start mode</span>`;
+  }
+}
+
+async function getRecommendations(){
+  const saved=loadProfile();
+  const program=saved?saved.program:document.getElementById("input-program").value;
+  if(!program){alert("Please save your profile first.");return;}
+  const numResults=parseInt(document.getElementById("num-results").value);
+  const area=document.getElementById("results-area");
+  area.innerHTML=`<div class="loading">Finding best courses for you...</div>`;
+  try{
+    const res=await fetch("/api/recommend",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({program,completed_ids:completedIds,mode,num_results:numResults}),
+    });
+    const data=await res.json();
+    if(!res.ok){area.innerHTML=`<div class="error-msg">Error: ${data.error}</div>`;return;}
+    const recs=data.recommendations;
+    if(!recs.length){area.innerHTML=`<div class="no-results">No eligible courses found. Try completing some foundation courses first.</div>`;return;}
+
+    const coldNote=completedIds.length===0
+      ?`<div class="cold-note">No course history — showing courses relevant to <strong>${program}</strong>. Add completed courses to your profile for personalised recommendations.</div>`:"";
+
+    const cards=recs.map((c,i)=>{
+      const cls=DOMAIN_CLASS[c.domain]||"";
+      const lvlCls=levelClass(c.level);
+      const pct=Math.round(c.score*100);
+      const prereqs=(c.prerequisites||[]).length
+        ?`<span class="tag" style="background:#f3f4f6;color:#4b5563">Prereq: ${c.prerequisites.join(", ")}</span>`:"";
+      return `<div class="rec-card">
+        <div class="rec-rank">
+          <span class="rank-badge">#${i+1}</span>
+          <span style="color:#6b7280">${c.id}</span>
+          ${c.level?`<span class="level-badge ${lvlCls}">${c.level}</span>`:""}
+          <span style="margin-left:auto;font-size:11px;color:#9ca3af">${c.ects} ECTS · ${c.semester} · ${c.language}</span>
+        </div>
+        <div class="rec-name">${c.name}</div>
+        <div class="score-row">
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:${pct}%"></div></div>
+          <span class="score-val">${c.score.toFixed(2)}</span>
+        </div>
+        <div class="tags-row">
+          <span class="tag ${cls}">${c.domain}</span>
+          ${prereqs}
+        </div>
+        <div class="explanation">${c.explanation}</div>
+      </div>`;
+    }).join("");
+
+    // locked courses section
+    let lockedHtml="";
+    if(data.locked_courses&&data.locked_courses.length){
+      const lockedCards=data.locked_courses.map(c=>{
+        const lvlCls=levelClass(c.level);
+        return `<div class="locked-card">
+          <span class="locked-icon">🔒</span>
+          <div>
+            <div class="locked-name">${c.name} <span class="level-badge ${lvlCls}" style="margin-left:4px">${c.level}</span></div>
+            <div class="locked-prereq">Requires: ${c.unmet_prerequisites.join(", ")} to be completed first</div>
+          </div>
+        </div>`;
+      }).join("");
+      lockedHtml=`<div class="locked-section">
+        <div class="locked-title">🔒 Locked courses — complete prerequisites to unlock</div>
+        ${lockedCards}
+      </div>`;
+    }
+
+    const name=saved?saved.name.split(" ")[0]:"Student";
+    area.innerHTML=`
+      <p class="results-header">Recommendations for <strong>${name}</strong> · ${data.program} · ${data.mode} mode · ${data.total_eligible} eligible courses</p>
+      ${coldNote}${cards}${lockedHtml}
+    `;
+  }catch(e){
+    area.innerHTML=`<div class="error-msg">Failed to connect to server. Make sure Flask is running on port 5001.</div>`;
+  }
+}
+
+async function loadAdminStats(){
+  try{
+    const[s,c]=await Promise.all([fetch("/api/stats"),fetch("/api/courses")]);
+    const stats=await s.json();
+    const{courses}=await c.json();
+    renderAdmin(stats,courses);
+  }catch{
+    document.getElementById("admin-area").innerHTML=`<div class="error-msg">Failed to load admin data.</div>`;
+  }
+}
+
+function renderAdmin(stats,courses){
+  const domains=Object.keys(stats.domains);
+  const maxEnr=Math.max(...Object.values(stats.domains).map(d=>d.avg_enrollment));
+  const levels=stats.levels||{};
+
+  const metrics=`<div class="metric-grid">
+    <div class="metric-card"><div class="metric-label">Total courses</div><div class="metric-val">${stats.total_courses}</div><div class="metric-sub">in catalog</div></div>
+    <div class="metric-card"><div class="metric-label">Avg enrollment</div><div class="metric-val">${stats.avg_enrollment}</div><div class="metric-sub">students / course</div></div>
+    <div class="metric-card"><div class="metric-label">Domains</div><div class="metric-val">${domains.length}</div><div class="metric-sub">coverage areas</div></div>
+  </div>`;
+
+  const levelGrid=`<div class="level-grid">
+    <div class="level-card" style="background:#dcfce7">
+      <div class="lval" style="color:#14532d">${levels.Foundation||0}</div>
+      <div class="llabel" style="color:#14532d">Foundation courses</div>
+    </div>
+    <div class="level-card" style="background:#dbeafe">
+      <div class="lval" style="color:#1e40af">${levels.Core||0}</div>
+      <div class="llabel" style="color:#1e40af">Core courses</div>
+    </div>
+    <div class="level-card" style="background:#fce7f3">
+      <div class="lval" style="color:#9d174d">${levels.Extension||0}</div>
+      <div class="llabel" style="color:#9d174d">Extension courses</div>
+    </div>
+  </div>`;
+
+  const domainRows=domains.map(d=>{
+    const info=stats.domains[d];
+    const pct=Math.round((info.avg_enrollment/maxEnr)*100);
+    const cls=DOMAIN_CLASS[d]||"";
+    return `<div class="domain-row">
+      <span class="domain-name"><span class="tag ${cls}">${d}</span></span>
+      <span style="font-size:12px;color:#9ca3af">${info.count} courses</span>
+      <div class="enroll-bar-bg"><div class="enroll-bar-fill" style="width:${pct}%"></div></div>
+      <span style="font-size:12px;min-width:36px;text-align:right;color:#9ca3af">~${info.avg_enrollment}</span>
+    </div>`;
+  }).join("");
+
+  const filterBtns=["All",...domains].map(d=>
+    `<button class="filter-chip ${adminDomainFilter===d?"active":""}" onclick="setAdminFilter('${d}')">${d==="All"?"All":d.split(" ")[0]}</button>`
+  ).join("");
+
+  const filtered=adminDomainFilter==="All"?courses:courses.filter(c=>c.domain===adminDomainFilter);
+  const tableRows=filtered.map(c=>{
+    const cls=DOMAIN_CLASS[c.domain]||"";
+    const lvlCls=levelClass(c.level);
+    const pct=Math.min(Math.round((c.enrollment/200)*100),100);
+    const prereqStr=(c.prerequisites||[]).join(", ")||"—";
+    return `<tr>
+      <td style="font-weight:600;width:90px">${c.id}</td>
+      <td style="width:200px">${c.name}</td>
+      <td style="width:90px"><span class="tag ${cls}" style="font-size:10px">${c.domain.split(" ")[0]}</span></td>
+      <td style="width:80px">${c.level?`<span class="level-badge ${lvlCls}">${c.level}</span>`:""}</td>
+      <td style="text-align:center;width:45px">${c.ects}</td>
+      <td style="width:130px;color:#6b7280;font-size:11px">${prereqStr}</td>
+    </tr>`;
+  }).join("");
+
+  document.getElementById("admin-area").innerHTML=`
+    ${metrics}
+    ${levelGrid}
+    <div class="card" style="margin-bottom:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+        <p class="section-title" style="margin:0">Enrollment by domain</p>
+        <button class="btn-secondary" onclick="refreshCourses()">Refresh from TISS</button>
+      </div>
+      ${domainRows}
+    </div>
+    <div class="card">
+      <p class="section-title">Course catalog (${filtered.length})</p>
+      <div class="filter-row">${filterBtns}</div>
+      <div class="scroll-table">
+        <table class="admin-table">
+          <thead><tr><th>ID</th><th>Name</th><th>Domain</th><th>Level</th><th>ECTS</th><th>Prerequisites</th></tr></thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function setAdminFilter(d){adminDomainFilter=d;loadAdminStats();}
+
+async function refreshCourses(){
+  const btn=event.target;
+  btn.textContent="Refreshing...";btn.disabled=true;
+  try{
+    const res=await fetch("/api/refresh",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({semester:"2025W"}),
+    });
+    const data=await res.json();
+    alert(data.message);
+    await init();await loadAdminStats();
+  }catch{alert("Refresh failed.");}
+  btn.textContent="Refresh from TISS";btn.disabled=false;
+}
+
+renderSelectedTags();
+init();
+</script>
+</body>
+</html>
