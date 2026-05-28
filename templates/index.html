@@ -191,6 +191,12 @@
             </div>
           </div>
         </div>
+
+        <div style="margin-top:1rem">
+          <label>Bachelor background <span style="font-size:11px;color:#9ca3af;font-weight:400">— what subjects did you study?</span></label>
+          <input type="text" id="input-bachelor" placeholder="e.g. machine learning, statistics, Python, databases, business management" />
+          <p style="font-size:11px;color:#9ca3af;margin-top:5px;font-style:italic">Separate topics with commas. Helps recommend better courses even without TU Wien history.</p>
+        </div>
         <div style="margin-top:1rem;display:flex;justify-content:flex-end">
           <button class="btn-save" onclick="saveProfile()">Save profile</button>
         </div>
@@ -200,17 +206,15 @@
     <!-- Settings -->
     <div class="card">
       <div class="card-title">⚙️ Settings</div>
-      <div class="formula-box" id="formula-box">
-        Scoring: <strong>S = C</strong> &nbsp;·&nbsp; C = content match (domain overlap with your completed courses)
-      </div>
+
       <div class="two-col" style="margin-bottom:1rem">
         <div>
           <label>Mode</label>
           <div class="mode-toggle">
-            <button class="mode-btn active" id="btn-default" onclick="setMode('default')">Relevance</button>
-            <button class="mode-btn" id="btn-diversity" onclick="setMode('diversity')">Diversity</button>
+            <button class="mode-btn active" id="btn-deepen" onclick="setMode('deepen')">Deepen</button>
+            <button class="mode-btn" id="btn-explore" onclick="setMode('explore')">Explore</button>
           </div>
-          <p class="mode-hint" id="mode-hint">Ranks purely by content match — no bias</p>
+          <p class="mode-hint" id="mode-hint">Show me more of what I already know</p>
         </div>
         <div>
           <label>Results: <span id="num-label">5</span></label>
@@ -258,7 +262,8 @@ function saveProfile(){
   if(!name){alert("Please enter your name.");return;}
   if(!program){alert("Please select your study program.");return;}
   if(!semester){alert("Please select your current semester.");return;}
-  const profile={name,program,semester,completedIds};
+  const bachelorTopics=document.getElementById("input-bachelor").value.trim();
+  const profile={name,program,semester,completedIds,bachelor:bachelorTopics};
   saveProfileToStorage(profile);
   showProfileView(profile);
 }
@@ -281,6 +286,7 @@ function showProfileView(p){
     completedIds.length?`${completedIds.length} completed course${completedIds.length>1?"s":""}`:"No completed courses";
   document.getElementById("profile-view").style.display="block";
   document.getElementById("profile-form").style.display="none";
+  if(profile.bachelor) document.getElementById("input-bachelor").value = profile.bachelor;
   renderSelectedTags();
   renderCourseList();
 }
@@ -313,14 +319,12 @@ function switchTab(tab){
 
 function setMode(m){
   mode=m;
-  document.getElementById("btn-default").classList.toggle("active",m==="default");
-  document.getElementById("btn-diversity").classList.toggle("active",m==="diversity");
-  document.getElementById("mode-hint").textContent=m==="default"
-    ?"Ranks purely by content match — no bias"
-    :"Balances content match with domain diversity";
-  document.getElementById("formula-box").innerHTML=m==="default"
-    ?"Scoring: <strong>S = C</strong> &nbsp;·&nbsp; C = content match (domain overlap with your completed courses)"
-    :"Scoring: <strong>S = 0.4·C + 0.6·D</strong> &nbsp;·&nbsp; C = content match &nbsp;·&nbsp; D = diversity (unexplored domains)";
+  document.getElementById("btn-deepen").classList.toggle("active",m==="deepen");
+  document.getElementById("btn-explore").classList.toggle("active",m==="explore");
+  document.getElementById("mode-hint").textContent=m==="deepen"
+    ?"Show me more of what I already know"
+    :"Show me courses outside my usual area";
+  // formula hidden from student view
 }
 
 function togglePicker(){
@@ -395,7 +399,7 @@ async function getRecommendations(){
   try{
     const res=await fetch("/api/recommend",{
       method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({program,completed_ids:completedIds,mode,num_results:numResults}),
+      body:JSON.stringify({program,completed_ids:completedIds,bachelor_topics:parseBachelorTopics(),mode,num_results:numResults}),
     });
     const data=await res.json();
     if(!res.ok){area.innerHTML=`<div class="error-msg">Error: ${data.error}</div>`;return;}
@@ -568,8 +572,35 @@ async function refreshCourses(){
   btn.textContent="Refresh from TISS";btn.disabled=false;
 }
 
+
+// synonym map — normalises common abbreviations to match course keywords
+const SYNONYMS = {
+  "ml": "machine learning", "ai": "artificial intelligence",
+  "maths": "mathematics", "math": "mathematics",
+  "stats": "statistics", "stat": "statistics",
+  "db": "database", "dbms": "database", "dbs": "database",
+  "oop": "software engineering", "java": "programming",
+  "python": "programming", "coding": "programming",
+  "c++": "programming", "js": "programming",
+  "bi": "business intelligence", "bpm": "business process",
+  "se": "software engineering", "os": "operating systems",
+  "nlp": "natural language processing", "cv": "computer vision",
+  "ds": "data science", "dl": "deep learning",
+  "sql": "database", "nosql": "database",
+  "er": "economics", "econ": "economics",
+};
+
+function parseBachelorTopics(){
+  const val = document.getElementById("input-bachelor")?.value || "";
+  if(!val.trim()) return [];
+  return val.split(",")
+    .map(t => t.trim().toLowerCase())
+    .filter(t => t.length > 0)
+    .map(t => SYNONYMS[t] || t);
+}
+
 renderSelectedTags();
 init();
 </script>
 </body>
-</html>
+</html>‚

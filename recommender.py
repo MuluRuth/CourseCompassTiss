@@ -1,78 +1,129 @@
-def score_courses(courses, completed_ids, program, mode="default"):
-    """
-    Content-Based Recommender scoring.
+def jaccard_similarity(set_a, set_b):
+    if not set_a or not set_b:
+        return 0.0
+    intersection = set_a & set_b
+    union = set_a | set_b
+    return len(intersection) / len(union)
 
-    Relevance mode:  S = C
-    Diversity mode:  S = 0.4*C + 0.6*D
 
-    C = content match (domain overlap with completed courses)
-    D = diversity bonus (rewards domains not yet explored)
+PROGRAM_DOMAINS = {
+    "Business Informatics": [
+        "Data Analytics", "Enterprise Engineering", "Economic Modeling",
+        "Information Systems Engineering", "Management Science",
+        "Research Methods",
+    ],
+    "Data Science": [
+        "Data Analytics", "Information Systems Engineering",
+        "Economic Modeling", "Enterprise Engineering",
+    ],
+    "Software Engineering": [
+        "Information Systems Engineering", "Enterprise Engineering",
+        "Data Analytics",
+    ],
+    "Logic and Artificial Intelligence": [
+        "Data Analytics", "Information Systems Engineering",
+        "Economic Modeling",
+    ],
+    "Media and Human-Centered Computing": [
+        "Enterprise Engineering", "Data Analytics",
+        "Information Systems Engineering",
+    ],
+    "Visual Computing": [
+        "Data Analytics", "Information Systems Engineering",
+        "Enterprise Engineering",
+    ],
+    "Embedded Computing Systems": [
+        "Information Systems Engineering", "Data Analytics",
+    ],
+    "Computer Engineering": [
+        "Information Systems Engineering", "Economic Modeling",
+        "Data Analytics",
+    ],
+    "Quantum Information Science and Technology": [
+        "Economic Modeling", "Information Systems Engineering",
+        "Data Analytics",
+    ],
+}
 
-    Cold start (no completed courses):
-      C = 1.0 if course domain matches program primary domains
-      C = 0.3 otherwise
-    """
 
-    PROGRAM_DOMAINS = {
-        "Business Informatics": ["Data Analytics", "Management Science", "Economic Modeling", "Information Systems Engineering"],
-        "Data Science": ["Data Analytics", "Artificial Intelligence", "Mathematics and Statistics"],
-        "Software Engineering": ["Software Engineering", "Information Systems Engineering", "Artificial Intelligence"],
-        "Logic and Artificial Intelligence": ["Artificial Intelligence", "Mathematics and Statistics"],
-        "Media and Human-Centered Computing": ["Ethics and Society", "Software Engineering", "Data Analytics"],
-        "Visual Computing": ["Artificial Intelligence", "Data Analytics", "Electrical Engineering"],
-        "Embedded Computing Systems": ["Electrical Engineering", "Software Engineering"],
-        "Computer Engineering": ["Electrical Engineering", "Mathematics and Statistics"],
-        "Quantum Information Science and Technology": ["Mathematics and Statistics", "Electrical Engineering"],
-    }
-
+def score_courses(courses, completed_ids, program, mode="deepen", extra_keywords=None):
     completed_courses = [c for c in courses if c["id"] in completed_ids]
     completed_domains = set(c["domain"] for c in completed_courses)
 
-    # filter: remove completed and courses with unmet prerequisites
-    eligible = []
+    completed_keywords = set(extra_keywords or [])
+    for c in completed_courses:
+        completed_keywords.update(c.get("keywords", []))
+
+    program_domains = PROGRAM_DOMAINS.get(program, [])
+
+    eligible_all = []
     locked = []
     for c in courses:
         if c["id"] in completed_ids:
+            continue
+        if c.get("domain") not in program_domains:
             continue
         unmet = [p for p in c.get("prerequisites", []) if p not in completed_ids]
         if unmet:
             locked.append({"course": c, "unmet": unmet})
         else:
-            eligible.append(c)
+            eligible_all.append(c)
 
-    if not eligible:
+    if not eligible_all:
         return [], locked
 
-    program_domains = PROGRAM_DOMAINS.get(program, [])
+    has_history = len(completed_domains) > 0
+
+    if has_history:
+        if mode == "deepen":
+            eligible = [c for c in eligible_all if c["domain"] in completed_domains]
+            if not eligible:
+                eligible = eligible_all
+        else:
+            eligible = [c for c in eligible_all if c["domain"] not in completed_domains]
+            if not eligible:
+                eligible = eligible_all
+    else:
+        primary = program_domains[:3]
+        secondary = program_domains[3:]
+        if mode == "deepen":
+            eligible = [c for c in eligible_all if c["domain"] in primary and c.get("level") == "Foundation"]
+            if not eligible:
+                eligible = [c for c in eligible_all if c["domain"] in primary]
+            if not eligible:
+                eligible = eligible_all
+        else:
+            eligible = [c for c in eligible_all if c["domain"] in secondary and c.get("level") == "Foundation"]
+            if not eligible:
+                eligible = [c for c in eligible_all if c["domain"] in secondary]
+            if not eligible:
+                eligible = eligible_all
+
     scored = []
-
     for course in eligible:
-        if not completed_domains:
-            C = 1.0 if course["domain"] in program_domains else 0.3
-        else:
-            C = 1.0 if course["domain"] in completed_domains else 0.2
+        course_keywords = set(course.get("keywords", []))
 
-        D = 1.0 if (completed_domains and course["domain"] not in completed_domains) else 0.2
-
-        if mode == "default":
-            score = C
+        if completed_keywords and course_keywords:
+            score = jaccard_similarity(completed_keywords, course_keywords)
+        elif not completed_keywords:
+            idx = program_domains.index(course["domain"]) if course["domain"] in program_domains else len(program_domains)
+            score = max(0.1, 1.0 - (idx * 0.1))
         else:
-            score = 0.4 * C + 0.6 * D
+            score = 0.2
 
         score = min(round(score, 4), 1.0)
 
         reasons = []
-        if not completed_domains:
-            if course["domain"] in program_domains:
-                reasons.append(f"it is relevant to the {program} program")
-            else:
-                reasons.append("it broadens your academic profile")
-        else:
-            if course["domain"] in completed_domains:
-                reasons.append(f"it builds on your background in {course['domain']}")
-            elif mode == "diversity":
-                reasons.append(f"it expands your knowledge into {course['domain']}")
-
+        shared = completed_keywords & course_keywords
+        if not completed_ids and not extra_keywords:
+            reasons.append(f"it is a core subject in the {program} program")
+        elif shared:
+            top = list(shared)[:3]
+            reasons.append(f"it shares topics with your background: {', '.join(top)}")
+        if mode == "deepen" and course["domain"] in completed_domains:
+            reasons.append(f"it deepens your knowledge in {course['domain']}")
+        elif mode == "explore" and course["domain"] not in completed_domains:
+            reasons.append(f"it introduces you to {course['domain']}")
         if not reasons:
             reasons.append("it matches your academic profile")
 
